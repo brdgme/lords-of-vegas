@@ -4,3 +4,13 @@ version = "0.1.0"
 authors = ["Michael Alexander <beefsack@gmail.com>"]
 
 [dependencies]
+brdgme-game = { git = "https://github.com/brdgme/game.git" }
+brdgme-markup = { git = "https://github.com/brdgme/markup.git" }
+brdgme-color = { git = "https://github.com/brdgme/color.git" }
+brdgme-rand-bot = { git = "https://github.com/brdgme/rand-bot.git" }
+brdgme-cmd = { git = "https://github.com/brdgme/cmd.git" }
+serde = "1.0.11"
+serde_derive = "1.0.11"
+error-chain = "0.10.0"
+lazy_static = "0.2.8"
+rand = "0.3.16"
