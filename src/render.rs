@@ -2,7 +2,7 @@ use rand::{self, Rng};
 
 use brdgme_game::Renderer;
 use brdgme_markup::{Align as A, Node as N};
-use brdgme_markup::ast::Row;
+use brdgme_markup::ast::{Col, ColTrans, ColType, Row};
 use brdgme_color::*;
 
 use std::iter;
@@ -185,18 +185,19 @@ impl Board {
 impl BoardTile {
     fn render(&self, loc: &Loc) -> N {
         let bot_text = format!("{}{:2}", loc.block, loc.lot);
-        let player_color = match *self {
-            BoardTile::Owned { player } | BoardTile::Built { player, .. } => *player_color(player),
-            _ => WHITE,
+        let player_color: Col = match *self {
+            BoardTile::Owned { player } | BoardTile::Built { player, .. } => player.into(),
+            _ => WHITE.into(),
         };
+        let player_color_fg = player_color.inv().mono();
         let middle_text = match *self {
             BoardTile::Built { die, .. } => vec![N::Bold(vec![N::text(format!("{}", die))])],
             _ => vec![
                 N::Bg(
-                    player_color.into(),
+                    player_color,
                     vec![
                         N::Fg(
-                            player_color.inv().mono().into(),
+                            player_color_fg,
                             vec![N::text(format!("${:2}", TILES[loc].build_cost))],
                         ),
                     ],
