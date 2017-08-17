@@ -176,9 +176,9 @@ impl Gamer for Game {
 
     fn command(
         &mut self,
-        player: usize,
-        input: &str,
-        players: &[String],
+        _player: usize,
+        _input: &str,
+        _players: &[String],
     ) -> Result<CommandResponse> {
         unimplemented!();
     }
@@ -200,7 +200,7 @@ impl Gamer for Game {
         }
     }
 
-    fn command_spec(&self, player: usize) -> Option<CommandSpec> {
+    fn command_spec(&self, _player: usize) -> Option<CommandSpec> {
         None
     }
 

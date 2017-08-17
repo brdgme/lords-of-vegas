@@ -1,18 +1,15 @@
-use rand::{self, Rng};
-
 use brdgme_game::Renderer;
 use brdgme_markup::{Align as A, Node as N};
-use brdgme_markup::ast::{Col, ColTrans, ColType, Row};
+use brdgme_markup::ast::{Col, Row};
 use brdgme_color::*;
 
 use std::iter;
 
 use PubState;
 use PlayerState;
-use Game;
 use board::{Block, Board, BoardTile, Loc, BLOCKS};
 use tile::TILES;
-use casino::{self, Casino, CASINOS};
+use casino::CASINOS;
 use card::casino_card_count;
 use CASINO_CARDS;
 use CASINO_TILES;
@@ -270,7 +267,7 @@ impl BoardTile {
 fn rect(w: usize, h: usize) -> String {
     let line: String = iter::repeat(" ").take(w).collect();
     let mut r = line.clone();
-    for i in 0..h - 1 {
+    for _ in 0..h - 1 {
         r.push('\n');
         r.push_str(&line);
     }

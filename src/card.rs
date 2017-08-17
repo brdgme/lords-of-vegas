@@ -1,11 +1,10 @@
 use rand::{self, Rng};
 
 use brdgme_markup::Node as N;
-use brdgme_color::*;
 
 use std::fmt;
 
-use board::{Block, Loc};
+use board::Loc;
 use tile::{Payout, TILES};
 use STARTING_CARDS;
 use casino::Casino;
