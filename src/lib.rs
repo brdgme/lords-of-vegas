@@ -27,10 +27,12 @@ pub mod render;
 pub mod card;
 mod command;
 
-use board::{Board, BoardTile};
+use board::{Board, BoardTile, Loc};
+use casino::Casino;
 use tile::TILES;
 use card::{render_cards, shuffled_deck, Card};
 use render::render_cash;
+use command::Command;
 
 pub const STARTING_CARDS: usize = 2;
 pub const PLAYER_DICE: usize = 12;
@@ -179,11 +181,19 @@ impl Gamer for Game {
 
     fn command(
         &mut self,
-        _player: usize,
-        _input: &str,
-        _players: &[String],
+        player: usize,
+        input: &str,
+        players: &[String],
     ) -> Result<CommandResponse> {
-        unimplemented!();
+        let output = self.command_parser(player).parse(input, players)?;
+        let (logs, can_undo) = match output.value {
+            Command::Build { loc, casino } => self.build(player, &loc, &casino)?,
+        };
+        Ok(CommandResponse {
+            logs,
+            can_undo,
+            remaining_input: output.remaining.to_string(),
+        })
     }
 
     fn status(&self) -> Status {
@@ -213,6 +223,42 @@ impl Gamer for Game {
 
     fn player_counts() -> Vec<usize> {
         (2..7).collect()
+    }
+}
+
+impl Game {
+    fn can_build(&self, player: usize) -> bool {
+        player == self.current_player
+    }
+
+    fn build(&mut self, p: usize, loc: &Loc, casino: &Casino) -> Result<(Vec<Log>, bool)> {
+        if !TILES.contains_key(loc) {
+            bail!(ErrorKind::InvalidInput("not a valid location".to_string()));
+        }
+        match self.board.get(loc) {
+            BoardTile::Owned { player } if player == p => {}
+            BoardTile::Built { .. } => bail!(ErrorKind::InvalidInput(
+                "that location has already been built".to_string()
+            )),
+            _ => bail!(ErrorKind::InvalidInput(
+                "you don't own that location".to_string()
+            )),
+        }
+        if self.players[p].cash < TILES[loc].build_cost {
+            bail!(ErrorKind::InvalidInput(
+                "you don't have enough cash".to_string()
+            ));
+        }
+        self.players[p].cash -= TILES[loc].build_cost;
+        self.board.set(
+            *loc,
+            BoardTile::Built {
+                casino: *casino,
+                die: TILES[loc].die,
+                player: p,
+            },
+        );
+        Ok((vec![], true))
     }
 }
 
