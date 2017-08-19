@@ -1,3 +1,5 @@
+#![feature(conservative_impl_trait)]
+
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
@@ -23,6 +25,7 @@ pub mod tile;
 pub mod casino;
 pub mod render;
 pub mod card;
+mod command;
 
 use board::{Board, BoardTile};
 use tile::TILES;

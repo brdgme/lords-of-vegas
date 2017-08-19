@@ -77,6 +77,12 @@ impl Loc {
     }
 }
 
+impl fmt::Display for Loc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.block, self.lot)
+    }
+}
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum BoardTile {
     Unowned,
@@ -129,6 +135,16 @@ impl Board {
             BoardTile::Built { casino, .. } if casino == *c => acc + 1,
             _ => acc,
         })
+    }
+
+    pub fn player_locs(&self, p: usize) -> Vec<Loc> {
+        self.0
+            .iter()
+            .filter_map(|(l, bt)| match *bt {
+                BoardTile::Owned { player } if player == p => Some(*l),
+                _ => None,
+            })
+            .collect()
     }
 }
 
