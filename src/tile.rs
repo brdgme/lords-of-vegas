@@ -510,5 +510,4 @@ fn tiles() -> TileMap {
         },
     );
     map
-
 }

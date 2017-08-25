@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use casino::Casino;
@@ -120,7 +120,7 @@ impl Board {
 
     pub fn used_resources(&self, p: usize) -> UsedResources {
         let mut used = UsedResources::default();
-        for (_, bt) in &self.0 {
+        for bt in self.0.values() {
             match *bt {
                 BoardTile::Owned { player } if player == p => used.tokens += 1,
                 BoardTile::Built { player, .. } if player == p => used.dice += 1,
@@ -145,6 +145,76 @@ impl Board {
                 _ => None,
             })
             .collect()
+    }
+
+    pub fn casino_at(&self, loc: &Loc) -> Option<BoardCasino> {
+        let casino = match self.get(loc) {
+            BoardTile::Built { casino, .. } => casino,
+            _ => return None,
+        };
+
+        let mut queue: HashSet<Loc> = HashSet::new();
+        queue.insert(*loc);
+        let mut visited: HashSet<Loc> = HashSet::new();
+        let mut tiles: Vec<CasinoTile> = vec![];
+
+        while !queue.is_empty() {
+            let next = *queue.iter().next().expect("queue shouldn't be empty");
+            visited.insert(next);
+            queue.remove(&next);
+            match self.get(&next) {
+                BoardTile::Built {
+                    casino: c,
+                    player,
+                    die,
+                } if c == casino =>
+                {
+                    tiles.push(CasinoTile {
+                        loc: next,
+                        player,
+                        die,
+                    });
+                    for n in next.neighbours() {
+                        if !visited.contains(&n) {
+                            queue.insert(n);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Some(BoardCasino { casino, tiles })
+    }
+}
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub struct CasinoTile {
+    pub loc: Loc,
+    pub player: usize,
+    pub die: usize,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct BoardCasino {
+    pub casino: Casino,
+    pub tiles: Vec<CasinoTile>,
+}
+
+impl BoardCasino {
+    pub fn bosses(&self) -> Vec<CasinoTile> {
+        let mut highest: usize = 0;
+        let mut bosses: Vec<CasinoTile> = vec![];
+        for t in &self.tiles {
+            if t.die > highest {
+                highest = t.die;
+                bosses = vec![];
+            }
+            if t.die == highest {
+                bosses.push(*t);
+            }
+        }
+        bosses
     }
 }
 
@@ -177,5 +247,112 @@ mod tests {
         assert_neighbours((A, 5), vec![(A, 2), (A, 4), (A, 6)]);
         assert_neighbours((A, 6), vec![(A, 3), (A, 5)]);
         assert_neighbours((C, 8), vec![(C, 5), (C, 7), (C, 9), (C, 11)]);
+    }
+
+    #[test]
+    fn test_board_casino_at_works() {
+        let mut b = Board::default();
+        assert_eq!(None, b.casino_at(&(Block::A, 1).into()));
+
+        b.set((Block::A, 1).into(), BoardTile::Owned { player: 0 });
+        assert_eq!(None, b.casino_at(&(Block::A, 1).into()));
+
+        b.set(
+            (Block::A, 1).into(),
+            BoardTile::Built {
+                casino: Casino::Albion,
+                die: 3,
+                player: 0,
+            },
+        );
+        assert_eq!(
+            Some(BoardCasino {
+                casino: Casino::Albion,
+                tiles: vec![
+                    CasinoTile {
+                        loc: (Block::A, 1).into(),
+                        die: 3,
+                        player: 0,
+                    },
+                ],
+            }),
+            b.casino_at(&(Block::A, 1).into())
+        );
+        assert_eq!(
+            vec![
+                CasinoTile {
+                    loc: (Block::A, 1).into(),
+                    die: 3,
+                    player: 0,
+                },
+            ],
+            b.casino_at(&(Block::A, 1).into()).unwrap().bosses()
+        );
+
+        // Set a diagonal and make sure it doesn't get included.
+        b.set(
+            (Block::A, 5).into(),
+            BoardTile::Built {
+                casino: Casino::Albion,
+                die: 5,
+                player: 0,
+            },
+        );
+        assert_eq!(
+            Some(BoardCasino {
+                casino: Casino::Albion,
+                tiles: vec![
+                    CasinoTile {
+                        loc: (Block::A, 1).into(),
+                        die: 3,
+                        player: 0,
+                    },
+                ],
+            }),
+            b.casino_at(&(Block::A, 1).into())
+        );
+
+        // Join the diagonal in and make sure it is.
+        b.set(
+            (Block::A, 2).into(),
+            BoardTile::Built {
+                casino: Casino::Albion,
+                die: 2,
+                player: 1,
+            },
+        );
+        assert_eq!(
+            Some(BoardCasino {
+                casino: Casino::Albion,
+                tiles: vec![
+                    CasinoTile {
+                        loc: (Block::A, 1).into(),
+                        die: 3,
+                        player: 0,
+                    },
+                    CasinoTile {
+                        loc: (Block::A, 2).into(),
+                        die: 2,
+                        player: 1,
+                    },
+                    CasinoTile {
+                        loc: (Block::A, 5).into(),
+                        die: 5,
+                        player: 0,
+                    },
+                ],
+            }),
+            b.casino_at(&(Block::A, 1).into())
+        );
+        assert_eq!(
+            vec![
+                CasinoTile {
+                    loc: (Block::A, 5).into(),
+                    die: 5,
+                    player: 0,
+                },
+            ],
+            b.casino_at(&(Block::A, 1).into()).unwrap().bosses()
+        );
     }
 }

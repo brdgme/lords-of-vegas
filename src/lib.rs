@@ -1,16 +1,16 @@
 #![feature(conservative_impl_trait)]
 
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate error_chain;
 #[macro_use]
 extern crate lazy_static;
 extern crate rand;
+#[macro_use]
+extern crate serde_derive;
 
+extern crate brdgme_color;
 extern crate brdgme_game;
 extern crate brdgme_markup;
-extern crate brdgme_color;
 
 use rand::Rng;
 
