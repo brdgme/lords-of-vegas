@@ -40,6 +40,9 @@ pub const PLAYER_OWNER_TOKENS: usize = 10;
 pub const CASINO_CARDS: usize = 9;
 pub const CASINO_TILES: usize = 9;
 
+pub const DIE_MIN: usize = 1;
+pub const DIE_MAX: usize = 6;
+
 pub static POINT_STOPS: &'static [usize] = &[
     0,
     1,
@@ -103,6 +106,10 @@ pub struct Game {
     pub played: Vec<Card>,
     pub board: Board,
     pub finished: bool,
+}
+
+pub fn roll() -> usize {
+    rand::thread_rng().gen::<usize>() % (DIE_MAX - DIE_MIN) + DIE_MIN
 }
 
 impl Gamer for Game {
@@ -258,7 +265,27 @@ impl Game {
                 player: p,
             },
         );
-        Ok((vec![], true))
+        let mut logs: Vec<Log> = vec![
+            Log::public(vec![
+                N::Player(p),
+                N::text(" built "),
+                casino.render(),
+                N::text(" at "),
+                loc.render(),
+            ]),
+        ];
+        let mut can_undo = true;
+
+        // Building can trigger boss ties.
+        match self.board.resolve_boss_ties() {
+            Some(resolve_logs) => {
+                logs.extend(resolve_logs);
+                can_undo = false;
+            }
+            None => {}
+        }
+
+        Ok((logs, can_undo))
     }
 }
 

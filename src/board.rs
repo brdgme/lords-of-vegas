@@ -1,7 +1,14 @@
+use brdgme_game::Log;
+use brdgme_markup::Node as N;
+
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::iter::FromIterator;
 
 use casino::Casino;
+use tile::TILES;
+
+use roll;
 
 const BLOCK_WIDTH: usize = 3;
 
@@ -74,6 +81,10 @@ impl Loc {
             n.push((self.block, self.lot + BLOCK_WIDTH).into());
         }
         n
+    }
+
+    pub fn render(&self) -> N {
+        N::Bold(vec![N::text(format!("{}", self))])
     }
 }
 
@@ -186,6 +197,72 @@ impl Board {
 
         Some(BoardCasino { casino, tiles })
     }
+
+    pub fn casinos(&self) -> Vec<BoardCasino> {
+        let mut visited: HashSet<Loc> = HashSet::new();
+        let mut casinos: Vec<BoardCasino> = vec![];
+        for loc in TILES.keys() {
+            if visited.contains(loc) {
+                continue;
+            }
+            match self.casino_at(loc) {
+                Some(bc) => {
+                    visited.extend(bc.tiles.iter().map(|t| t.loc));
+                    casinos.push(bc);
+                }
+                None => {}
+            }
+        }
+        casinos
+    }
+
+    pub fn reroll_at(&mut self, loc: &Loc) -> Option<usize> {
+        let t = self.get(loc);
+        match t {
+            BoardTile::Built { casino, player, .. } => {
+                let die = roll();
+                self.set(
+                    *loc,
+                    BoardTile::Built {
+                        casino,
+                        player,
+                        die,
+                    },
+                );
+                Some(die)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn resolve_boss_ties(&mut self) -> Option<Vec<Log>> {
+        let mut boss_tie = false;
+        let mut logs: Vec<Log> = vec![];
+
+        for bc in self.casinos() {
+            let boss_tiles = bc.boss_tiles();
+            let bosses: HashSet<usize> = HashSet::from_iter(boss_tiles.iter().map(|bt| bt.player));
+            if bosses.len() <= 1 {
+                // There is no boss tie.
+                continue;
+            }
+            boss_tie = true;
+            for bt in &boss_tiles {
+                self.reroll_at(&bt.loc);
+            }
+        }
+
+        if boss_tie {
+            // Do another pass, we may have created a new boss tie.
+            match self.resolve_boss_ties() {
+                Some(new_logs) => logs.extend(new_logs),
+                None => {}
+            }
+            Some(logs)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -202,7 +279,7 @@ pub struct BoardCasino {
 }
 
 impl BoardCasino {
-    pub fn bosses(&self) -> Vec<CasinoTile> {
+    pub fn boss_tiles(&self) -> Vec<CasinoTile> {
         let mut highest: usize = 0;
         let mut bosses: Vec<CasinoTile> = vec![];
         for t in &self.tiles {
@@ -286,7 +363,7 @@ mod tests {
                     player: 0,
                 },
             ],
-            b.casino_at(&(Block::A, 1).into()).unwrap().bosses()
+            b.casino_at(&(Block::A, 1).into()).unwrap().boss_tiles()
         );
 
         // Set a diagonal and make sure it doesn't get included.
@@ -352,7 +429,48 @@ mod tests {
                     player: 0,
                 },
             ],
-            b.casino_at(&(Block::A, 1).into()).unwrap().bosses()
+            b.casino_at(&(Block::A, 1).into()).unwrap().boss_tiles()
         );
+    }
+
+    #[test]
+    fn test_board_casinos_works() {
+        let mut b = Board::default();
+        assert_eq!(0, b.casinos().len());
+
+        b.set((Block::A, 1).into(), BoardTile::Owned { player: 0 });
+        assert_eq!(0, b.casinos().len());
+
+        b.set(
+            (Block::A, 1).into(),
+            BoardTile::Built {
+                casino: Casino::Albion,
+                die: 3,
+                player: 0,
+            },
+        );
+        assert_eq!(1, b.casinos().len());
+
+        // Set a diagonal and make sure it doesn't get included.
+        b.set(
+            (Block::A, 5).into(),
+            BoardTile::Built {
+                casino: Casino::Albion,
+                die: 5,
+                player: 0,
+            },
+        );
+        assert_eq!(2, b.casinos().len());
+
+        // Join the diagonal in and make sure it is.
+        b.set(
+            (Block::A, 2).into(),
+            BoardTile::Built {
+                casino: Casino::Albion,
+                die: 2,
+                player: 1,
+            },
+        );
+        assert_eq!(1, b.casinos().len());
     }
 }
