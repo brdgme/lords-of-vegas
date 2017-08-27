@@ -39,6 +39,7 @@ pub const PLAYER_DICE: usize = 12;
 pub const PLAYER_OWNER_TOKENS: usize = 10;
 pub const CASINO_CARDS: usize = 9;
 pub const CASINO_TILES: usize = 9;
+pub const CASINO_DEFAULT_HEIGHT: usize = 1;
 
 pub const DIE_MIN: usize = 1;
 pub const DIE_MAX: usize = 6;
@@ -195,6 +196,11 @@ impl Gamer for Game {
         let output = self.command_parser(player).parse(input, players)?;
         let (logs, can_undo) = match output.value {
             Command::Build { loc, casino } => self.build(player, &loc, &casino)?,
+            Command::Remodel { loc, casino } => unimplemented!(),
+            Command::Reorg { loc } => unimplemented!(),
+            Command::Sprawl { from, to } => unimplemented!(),
+            Command::Gamble { player, amount } => unimplemented!(),
+            Command::Raise { loc } => unimplemented!(),
         };
         Ok(CommandResponse {
             logs,
@@ -263,6 +269,7 @@ impl Game {
                 casino: *casino,
                 die: TILES[loc].die,
                 player: p,
+                height: CASINO_DEFAULT_HEIGHT,
             },
         );
         let mut logs: Vec<Log> = vec![

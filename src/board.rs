@@ -102,6 +102,7 @@ pub enum BoardTile {
         player: usize,
         casino: Casino,
         die: usize,
+        height: usize,
     },
 }
 
@@ -159,8 +160,8 @@ impl Board {
     }
 
     pub fn casino_at(&self, loc: &Loc) -> Option<BoardCasino> {
-        let casino = match self.get(loc) {
-            BoardTile::Built { casino, .. } => casino,
+        let (casino, height) = match self.get(loc) {
+            BoardTile::Built { casino, height, .. } => (casino, height),
             _ => return None,
         };
 
@@ -178,7 +179,8 @@ impl Board {
                     casino: c,
                     player,
                     die,
-                } if c == casino =>
+                    height: h,
+                } if c == casino && h == height =>
                 {
                     tiles.push(CasinoTile {
                         loc: next,
@@ -195,7 +197,11 @@ impl Board {
             }
         }
 
-        Some(BoardCasino { casino, tiles })
+        Some(BoardCasino {
+            casino,
+            height,
+            tiles,
+        })
     }
 
     pub fn casinos(&self) -> Vec<BoardCasino> {
@@ -219,7 +225,12 @@ impl Board {
     pub fn reroll_at(&mut self, loc: &Loc) -> Option<usize> {
         let t = self.get(loc);
         match t {
-            BoardTile::Built { casino, player, .. } => {
+            BoardTile::Built {
+                casino,
+                player,
+                height,
+                ..
+            } => {
                 let die = roll();
                 self.set(
                     *loc,
@@ -227,6 +238,7 @@ impl Board {
                         casino,
                         player,
                         die,
+                        height,
                     },
                 );
                 Some(die)
@@ -275,6 +287,7 @@ pub struct CasinoTile {
 #[derive(PartialEq, Debug)]
 pub struct BoardCasino {
     pub casino: Casino,
+    pub height: usize,
     pub tiles: Vec<CasinoTile>,
 }
 
@@ -340,11 +353,13 @@ mod tests {
                 casino: Casino::Albion,
                 die: 3,
                 player: 0,
+                height: 1,
             },
         );
         assert_eq!(
             Some(BoardCasino {
                 casino: Casino::Albion,
+                height: 1,
                 tiles: vec![
                     CasinoTile {
                         loc: (Block::A, 1).into(),
@@ -373,11 +388,13 @@ mod tests {
                 casino: Casino::Albion,
                 die: 5,
                 player: 0,
+                height: 1,
             },
         );
         assert_eq!(
             Some(BoardCasino {
                 casino: Casino::Albion,
+                height: 1,
                 tiles: vec![
                     CasinoTile {
                         loc: (Block::A, 1).into(),
@@ -396,11 +413,13 @@ mod tests {
                 casino: Casino::Albion,
                 die: 2,
                 player: 1,
+                height: 1,
             },
         );
         assert_eq!(
             Some(BoardCasino {
                 casino: Casino::Albion,
+                height: 1,
                 tiles: vec![
                     CasinoTile {
                         loc: (Block::A, 1).into(),
@@ -447,6 +466,7 @@ mod tests {
                 casino: Casino::Albion,
                 die: 3,
                 player: 0,
+                height: 1,
             },
         );
         assert_eq!(1, b.casinos().len());
@@ -458,6 +478,7 @@ mod tests {
                 casino: Casino::Albion,
                 die: 5,
                 player: 0,
+                height: 1,
             },
         );
         assert_eq!(2, b.casinos().len());
@@ -469,6 +490,7 @@ mod tests {
                 casino: Casino::Albion,
                 die: 2,
                 player: 1,
+                height: 1,
             },
         );
         assert_eq!(1, b.casinos().len());
