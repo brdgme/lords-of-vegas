@@ -11,13 +11,17 @@ use casino::Casino;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Card {
-    Loc(Loc),
+    Loc { loc: Loc },
     GameEnd,
 }
 
 pub fn shuffled_deck(players: usize) -> Vec<Card> {
     let mut rng = rand::thread_rng();
-    let mut cards: Vec<Card> = TILES.keys().cloned().map(Card::Loc).collect();
+    let mut cards: Vec<Card> = TILES
+        .keys()
+        .cloned()
+        .map(|t| Card::Loc { loc: t })
+        .collect();
     rng.shuffle(&mut cards);
     // Insert the game end card in the last quarter of the deck, taking into account the cards which
     // will be drawn by the players as adding the end card happens after players draw.
@@ -32,7 +36,7 @@ pub fn shuffled_deck(players: usize) -> Vec<Card> {
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Card::Loc(l) => write!(f, "{}{}", l.block, l.lot),
+            Card::Loc { loc } => write!(f, "{}{}", loc.block, loc.lot),
             Card::GameEnd => write!(f, "Game end"),
         }
     }
@@ -57,7 +61,7 @@ pub fn render_cards(cards: &[Card]) -> Vec<N> {
 
 pub fn casino_card_count(cards: &[Card], casino: &Casino) -> usize {
     cards.iter().fold(0, |acc, c| match *c {
-        Card::Loc(ref l) => match TILES[l].payout {
+        Card::Loc { ref loc } => match TILES[loc].payout {
             Payout::Casino(c) if c == *casino => acc + 1,
             _ => acc,
         },

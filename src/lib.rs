@@ -12,6 +12,9 @@ extern crate brdgme_color;
 extern crate brdgme_game;
 extern crate brdgme_markup;
 
+#[cfg(test)]
+extern crate serde_json;
+
 use rand::Rng;
 
 use brdgme_game::{CommandResponse, Gamer, Log, Status};
@@ -130,9 +133,9 @@ impl Gamer for Game {
             .map(|p| {
                 let cards: Vec<Card> = deck.drain(..STARTING_CARDS).collect();
                 let cash = cards.iter().fold(0, |acc, c| match *c {
-                    Card::Loc(l) => {
-                        board.set(l, BoardTile::Owned { player: p });
-                        acc + TILES[&l].starting_cash
+                    Card::Loc { loc } => {
+                        board.set(loc, BoardTile::Owned { player: p });
+                        acc + TILES[&loc].starting_cash
                     }
                     Card::GameEnd => unreachable!(),
                 });
@@ -226,8 +229,15 @@ impl Gamer for Game {
         }
     }
 
-    fn command_spec(&self, _player: usize) -> Option<CommandSpec> {
-        None
+    fn command_spec(&self, player: usize) -> Option<CommandSpec> {
+        if self.whose_turn()
+            .into_iter()
+            .find(|&p| p == player)
+            .is_none()
+        {
+            return None;
+        }
+        Some(self.command_parser(player).to_spec())
     }
 
     fn player_count(&self) -> usize {
@@ -303,5 +313,14 @@ mod tests {
     #[test]
     fn player_counts_works() {
         assert_eq!(Game::player_counts(), vec![2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn json_works() {
+        use serde_json;
+        let game = Game::new(3)
+            .expect("could not create game with 3 players")
+            .0;
+        serde_json::to_string(&game).expect("could not serialise game to JSON");
     }
 }
