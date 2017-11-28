@@ -1,9 +1,13 @@
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{Error as DeError, Unexpected, Visitor};
+
 use brdgme_game::Log;
 use brdgme_markup::Node as N;
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::iter::FromIterator;
+use std::convert::TryFrom;
 
 use casino::Casino;
 use tile::TILES;
@@ -34,6 +38,22 @@ impl Block {
     }
 }
 
+impl TryFrom<char> for Block {
+    type Error = String;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'A' => Ok(Block::A),
+            'B' => Ok(Block::B),
+            'C' => Ok(Block::C),
+            'D' => Ok(Block::D),
+            'E' => Ok(Block::E),
+            'F' => Ok(Block::F),
+            _ => Err("expected block character A-F".to_string()),
+        }
+    }
+}
+
 impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -53,10 +73,27 @@ impl fmt::Display for Block {
 
 pub type Lot = usize;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Copy, Clone)]
 pub struct Loc {
     pub block: Block,
     pub lot: Lot,
+}
+
+impl<'a> TryFrom<&'a str> for Loc {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.is_empty() {
+            return Err("Loc string is empty".to_string());
+        }
+        let mut chars = value.chars();
+        let block = Block::try_from(chars.next().unwrap())?;
+        let lot_str: String = chars.collect();
+        let lot: Lot = lot_str
+            .parse()
+            .map_err(|_| "Loc lot must be a number".to_string())?;
+        Ok((block, lot).into())
+    }
 }
 
 impl From<(Block, Lot)> for Loc {
@@ -91,6 +128,43 @@ impl Loc {
 impl fmt::Display for Loc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}{}", self.block, self.lot)
+    }
+}
+
+// We use custom serialisation for `Loc` as it needs to become a string type to be used in JSON maps
+
+impl Serialize for Loc {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}", self))
+    }
+}
+
+struct LocVisitor;
+
+impl<'de> Visitor<'de> for LocVisitor {
+    type Value = Loc;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a loc such as B2")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Loc, E>
+    where
+        E: DeError,
+    {
+        Loc::try_from(value).map_err(|e| DeError::invalid_value(Unexpected::Other(&e), &self))
+    }
+}
+
+impl<'de> Deserialize<'de> for Loc {
+    fn deserialize<D>(deserializer: D) -> Result<Loc, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(LocVisitor)
     }
 }
 

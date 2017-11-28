@@ -1,10 +1,11 @@
-#![feature(conservative_impl_trait)]
+#![feature(conservative_impl_trait, try_from)]
 
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
 extern crate lazy_static;
 extern crate rand;
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
