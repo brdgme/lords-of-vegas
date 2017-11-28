@@ -191,6 +191,7 @@ impl Gamer for Game {
         }
     }
 
+    #[allow(unused_variables)]
     fn command(
         &mut self,
         player: usize,
@@ -295,12 +296,9 @@ impl Game {
         let mut can_undo = true;
 
         // Building can trigger boss ties.
-        match self.board.resolve_boss_ties() {
-            Some(resolve_logs) => {
-                logs.extend(resolve_logs);
-                can_undo = false;
-            }
-            None => {}
+        if let Some(resolve_logs) = self.board.resolve_boss_ties() {
+            logs.extend(resolve_logs);
+            can_undo = false;
         }
 
         Ok((logs, can_undo))

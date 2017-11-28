@@ -285,12 +285,9 @@ impl Board {
             if visited.contains(loc) {
                 continue;
             }
-            match self.casino_at(loc) {
-                Some(bc) => {
-                    visited.extend(bc.tiles.iter().map(|t| t.loc));
-                    casinos.push(bc);
-                }
-                None => {}
+            if let Some(bc) = self.casino_at(loc) {
+                visited.extend(bc.tiles.iter().map(|t| t.loc));
+                casinos.push(bc);
             }
         }
         casinos
@@ -340,9 +337,8 @@ impl Board {
 
         if boss_tie {
             // Do another pass, we may have created a new boss tie.
-            match self.resolve_boss_ties() {
-                Some(new_logs) => logs.extend(new_logs),
-                None => {}
+            if let Some(new_logs) = self.resolve_boss_ties() {
+                logs.extend(new_logs);
             }
             Some(logs)
         } else {
