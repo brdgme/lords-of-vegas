@@ -1,8 +1,6 @@
 #![feature(conservative_impl_trait, try_from)]
 
 #[macro_use]
-extern crate error_chain;
-#[macro_use]
 extern crate lazy_static;
 extern crate rand;
 extern crate serde;
@@ -20,7 +18,7 @@ use rand::Rng;
 
 use brdgme_game::{CommandResponse, Gamer, Log, Status};
 use brdgme_game::game::gen_placings;
-use brdgme_game::errors::*;
+use brdgme_game::errors::GameError;
 use brdgme_game::command::Spec as CommandSpec;
 use brdgme_markup::Node as N;
 
@@ -49,35 +47,8 @@ pub const DIE_MIN: usize = 1;
 pub const DIE_MAX: usize = 6;
 
 pub static POINT_STOPS: &'static [usize] = &[
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    10,
-    12,
-    14,
-    16,
-    18,
-    20,
-    23,
-    26,
-    29,
-    32,
-    36,
-    40,
-    44,
-    49,
-    54,
-    60,
-    66,
-    73,
-    81,
-    90,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 23, 26, 29, 32, 36, 40, 44, 49, 54, 60, 66,
+    73, 81, 90,
 ];
 
 #[derive(Serialize, Deserialize)]
@@ -121,9 +92,13 @@ impl Gamer for Game {
     type PubState = PubState;
     type PlayerState = PlayerState;
 
-    fn new(players: usize) -> Result<(Self, Vec<Log>)> {
+    fn new(players: usize) -> Result<(Self, Vec<Log>), GameError> {
         if players < 2 || players > 6 {
-            bail!(ErrorKind::PlayerCount(2, 6, players));
+            return Err(GameError::PlayerCount {
+                min: 2,
+                max: 6,
+                given: players,
+            });
         }
         let mut logs: Vec<Log> = vec![];
         let mut board = Board::default();
@@ -197,7 +172,7 @@ impl Gamer for Game {
         player: usize,
         input: &str,
         players: &[String],
-    ) -> Result<CommandResponse> {
+    ) -> Result<CommandResponse, GameError> {
         let output = self.command_parser(player).parse(input, players)?;
         let (logs, can_undo) = match output.value {
             Command::Build { loc, casino } => self.build(player, &loc, &casino)?,
@@ -256,23 +231,34 @@ impl Game {
         player == self.current_player
     }
 
-    fn build(&mut self, p: usize, loc: &Loc, casino: &Casino) -> Result<(Vec<Log>, bool)> {
+    fn build(
+        &mut self,
+        p: usize,
+        loc: &Loc,
+        casino: &Casino,
+    ) -> Result<(Vec<Log>, bool), GameError> {
         if !TILES.contains_key(loc) {
-            bail!(ErrorKind::InvalidInput("not a valid location".to_string()));
+            return Err(GameError::InvalidInput {
+                message: "not a valid location".to_string(),
+            });
         }
         match self.board.get(loc) {
             BoardTile::Owned { player } if player == p => {}
-            BoardTile::Built { .. } => bail!(ErrorKind::InvalidInput(
-                "that location has already been built".to_string()
-            )),
-            _ => bail!(ErrorKind::InvalidInput(
-                "you don't own that location".to_string()
-            )),
+            BoardTile::Built { .. } => {
+                return Err(GameError::InvalidInput {
+                    message: "that location has already been built".to_string(),
+                })
+            }
+            _ => {
+                return Err(GameError::InvalidInput {
+                    message: "you don't own that location".to_string(),
+                })
+            }
         }
         if self.players[p].cash < TILES[loc].build_cost {
-            bail!(ErrorKind::InvalidInput(
-                "you don't have enough cash".to_string()
-            ));
+            return Err(GameError::InvalidInput {
+                message: "you don't have enough cash".to_string(),
+            });
         }
         self.players[p].cash -= TILES[loc].build_cost;
         self.board.set(
