@@ -171,7 +171,9 @@ impl<'de> Deserialize<'de> for Loc {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum BoardTile {
     Unowned,
-    Owned { player: usize },
+    Owned {
+        player: usize,
+    },
     Built {
         player: usize,
         casino: Casino,
