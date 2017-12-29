@@ -195,7 +195,17 @@ impl BoardTile {
             BoardTile::Built {
                 owner: Some(TileOwner { die, .. }),
                 ..
-            } => vec![N::Bold(vec![N::text(format!("{}", die))])],
+            } => vec![
+                N::Bg(
+                    player_color,
+                    vec![
+                        N::Fg(
+                            player_color_fg,
+                            vec![N::Bold(vec![N::text(format!(" {} ", die))])],
+                        ),
+                    ],
+                ),
+            ],
             _ => vec![
                 N::Bg(
                     player_color,
