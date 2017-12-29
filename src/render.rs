@@ -7,7 +7,7 @@ use std::iter;
 
 use PubState;
 use PlayerState;
-use board::{Block, Board, BoardTile, Loc, BLOCKS};
+use board::{Block, Board, BoardTile, Loc, TileOwner, BLOCKS};
 use tile::TILES;
 use casino::CASINOS;
 use card::casino_card_count;
@@ -183,13 +183,19 @@ impl BoardTile {
     fn render(&self, loc: &Loc) -> N {
         let bot_text = format!("{}{:2}", loc.block, loc.lot);
         let player_color: Col = match *self {
-            BoardTile::Owned { player } => player.into(),
-            BoardTile::Built { player, .. } if player.is_some() => player.unwrap().into(),
+            BoardTile::Owned { player }
+            | BoardTile::Built {
+                owner: Some(TileOwner { player, .. }),
+                ..
+            } => player.into(),
             _ => WHITE.into(),
         };
         let player_color_fg = player_color.inv().mono();
         let middle_text = match *self {
-            BoardTile::Built { die, .. } => vec![N::Bold(vec![N::text(format!("{}", die))])],
+            BoardTile::Built {
+                owner: Some(TileOwner { die, .. }),
+                ..
+            } => vec![N::Bold(vec![N::text(format!("{}", die))])],
             _ => vec![
                 N::Bg(
                     player_color,

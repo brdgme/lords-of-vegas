@@ -29,7 +29,7 @@ pub mod render;
 pub mod card;
 mod command;
 
-use board::{Board, BoardTile, Loc};
+use board::{Board, BoardTile, Loc, TileOwner};
 use casino::Casino;
 use tile::TILES;
 use card::{render_cards, shuffled_deck, Card};
@@ -265,8 +265,10 @@ impl Game {
             *loc,
             BoardTile::Built {
                 casino: *casino,
-                die: TILES[loc].die,
-                player: Some(p),
+                owner: Some(TileOwner {
+                    die: TILES[loc].die,
+                    player: p,
+                }),
                 height: CASINO_DEFAULT_HEIGHT,
             },
         );

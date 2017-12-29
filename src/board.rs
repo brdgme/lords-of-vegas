@@ -168,6 +168,12 @@ impl<'de> Deserialize<'de> for Loc {
     }
 }
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TileOwner {
+    pub player: usize,
+    pub die: usize,
+}
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum BoardTile {
     Unowned,
@@ -175,9 +181,8 @@ pub enum BoardTile {
         player: usize,
     },
     Built {
-        player: Option<usize>,
+        owner: Option<TileOwner>,
         casino: Casino,
-        die: usize,
         height: usize,
     },
 }
@@ -211,7 +216,13 @@ impl Board {
         for bt in self.0.values() {
             match *bt {
                 BoardTile::Owned { player } if player == p => used.tokens += 1,
-                BoardTile::Built { player, .. } if player == Some(p) => used.dice += 1,
+                BoardTile::Built {
+                    owner: Some(TileOwner { player, .. }),
+                    ..
+                } if player == p =>
+                {
+                    used.dice += 1
+                }
                 _ => {}
             }
         }
@@ -253,16 +264,11 @@ impl Board {
             match self.get(&next) {
                 BoardTile::Built {
                     casino: c,
-                    player,
-                    die,
+                    owner,
                     height: h,
                 } if c == casino && h == height =>
                 {
-                    tiles.push(CasinoTile {
-                        loc: next,
-                        player,
-                        die,
-                    });
+                    tiles.push(CasinoTile { loc: next, owner });
                     for n in next.neighbours() {
                         if !visited.contains(&n) {
                             queue.insert(n);
@@ -300,7 +306,7 @@ impl Board {
         match t {
             BoardTile::Built {
                 casino,
-                player,
+                owner: Some(TileOwner { player, .. }),
                 height,
                 ..
             } => {
@@ -309,8 +315,7 @@ impl Board {
                     *loc,
                     BoardTile::Built {
                         casino,
-                        player,
-                        die,
+                        owner: Some(TileOwner { player, die }),
                         height,
                     },
                 );
@@ -326,8 +331,11 @@ impl Board {
 
         for bc in self.casinos() {
             let boss_tiles = bc.boss_tiles();
-            let bosses: HashSet<usize> =
-                HashSet::from_iter(boss_tiles.iter().filter_map(|bt| bt.player));
+            let bosses: HashSet<usize> = HashSet::from_iter(
+                boss_tiles
+                    .iter()
+                    .filter_map(|bt| bt.owner.map(|to| to.player)),
+            );
             if bosses.len() <= 1 {
                 // There is no boss tie.
                 continue;
@@ -353,8 +361,7 @@ impl Board {
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct CasinoTile {
     pub loc: Loc,
-    pub player: Option<usize>,
-    pub die: usize,
+    pub owner: Option<TileOwner>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -369,12 +376,14 @@ impl BoardCasino {
         let mut highest: usize = 0;
         let mut bosses: Vec<CasinoTile> = vec![];
         for t in &self.tiles {
-            if t.die > highest {
-                highest = t.die;
-                bosses = vec![];
-            }
-            if t.die == highest {
-                bosses.push(*t);
+            if let Some(TileOwner { die, .. }) = t.owner {
+                if die > highest {
+                    highest = die;
+                    bosses = vec![];
+                }
+                if die == highest {
+                    bosses.push(*t);
+                }
             }
         }
         bosses
@@ -436,8 +445,7 @@ mod tests {
                 tiles: vec![
                     CasinoTile {
                         loc: (Block::A, 1).into(),
-                        die: 3,
-                        player: 0,
+                        owner: Some(TileOwner { die: 3, player: 0 }),
                     },
                 ],
             }),
@@ -447,8 +455,7 @@ mod tests {
             vec![
                 CasinoTile {
                     loc: (Block::A, 1).into(),
-                    die: 3,
-                    player: 0,
+                    owner: Some(TileOwner { die: 3, player: 0 }),
                 },
             ],
             b.casino_at(&(Block::A, 1).into()).unwrap().boss_tiles()
@@ -471,8 +478,7 @@ mod tests {
                 tiles: vec![
                     CasinoTile {
                         loc: (Block::A, 1).into(),
-                        die: 3,
-                        player: 0,
+                        owner: Some(TileOwner { die: 3, player: 0 }),
                     },
                 ],
             }),
@@ -496,18 +502,15 @@ mod tests {
                 tiles: vec![
                     CasinoTile {
                         loc: (Block::A, 1).into(),
-                        die: 3,
-                        player: 0,
+                        owner: Some(TileOwner { die: 3, player: 0 }),
                     },
                     CasinoTile {
                         loc: (Block::A, 2).into(),
-                        die: 2,
-                        player: 1,
+                        owner: Some(TileOwner { die: 2, player: 1 }),
                     },
                     CasinoTile {
                         loc: (Block::A, 5).into(),
-                        die: 5,
-                        player: 0,
+                        owner: Some(TileOwner { die: 5, player: 0 }),
                     },
                 ],
             }),
@@ -517,8 +520,7 @@ mod tests {
             vec![
                 CasinoTile {
                     loc: (Block::A, 5).into(),
-                    die: 5,
-                    player: 0,
+                    owner: Some(TileOwner { die: 5, player: 0 }),
                 },
             ],
             b.casino_at(&(Block::A, 1).into()).unwrap().boss_tiles()
