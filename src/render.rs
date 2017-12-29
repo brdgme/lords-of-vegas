@@ -183,7 +183,8 @@ impl BoardTile {
     fn render(&self, loc: &Loc) -> N {
         let bot_text = format!("{}{:2}", loc.block, loc.lot);
         let player_color: Col = match *self {
-            BoardTile::Owned { player } | BoardTile::Built { player, .. } => player.into(),
+            BoardTile::Owned { player } => player.into(),
+            BoardTile::Built { player, .. } if player.is_some() => player.unwrap().into(),
             _ => WHITE.into(),
         };
         let player_color_fg = player_color.inv().mono();

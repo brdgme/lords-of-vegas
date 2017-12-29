@@ -175,7 +175,7 @@ pub enum BoardTile {
         player: usize,
     },
     Built {
-        player: usize,
+        player: Option<usize>,
         casino: Casino,
         die: usize,
         height: usize,
@@ -211,7 +211,7 @@ impl Board {
         for bt in self.0.values() {
             match *bt {
                 BoardTile::Owned { player } if player == p => used.tokens += 1,
-                BoardTile::Built { player, .. } if player == p => used.dice += 1,
+                BoardTile::Built { player, .. } if player == Some(p) => used.dice += 1,
                 _ => {}
             }
         }
@@ -326,7 +326,8 @@ impl Board {
 
         for bc in self.casinos() {
             let boss_tiles = bc.boss_tiles();
-            let bosses: HashSet<usize> = HashSet::from_iter(boss_tiles.iter().map(|bt| bt.player));
+            let bosses: HashSet<usize> =
+                HashSet::from_iter(boss_tiles.iter().filter_map(|bt| bt.player));
             if bosses.len() <= 1 {
                 // There is no boss tie.
                 continue;
@@ -352,7 +353,7 @@ impl Board {
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct CasinoTile {
     pub loc: Loc,
-    pub player: usize,
+    pub player: Option<usize>,
     pub die: usize,
 }
 

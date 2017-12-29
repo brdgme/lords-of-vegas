@@ -266,7 +266,7 @@ impl Game {
             BoardTile::Built {
                 casino: *casino,
                 die: TILES[loc].die,
-                player: p,
+                player: Some(p),
                 height: CASINO_DEFAULT_HEIGHT,
             },
         );
