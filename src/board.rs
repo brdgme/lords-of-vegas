@@ -135,8 +135,8 @@ impl fmt::Display for Loc {
 
 impl Serialize for Loc {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
         serializer.serialize_str(&format!("{}", self))
     }
@@ -152,8 +152,8 @@ impl<'de> Visitor<'de> for LocVisitor {
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Loc, E>
-    where
-        E: DeError,
+        where
+            E: DeError,
     {
         Loc::try_from(value).map_err(|e| DeError::invalid_value(Unexpected::Other(&e), &self))
     }
@@ -161,8 +161,8 @@ impl<'de> Visitor<'de> for LocVisitor {
 
 impl<'de> Deserialize<'de> for Loc {
     fn deserialize<D>(deserializer: D) -> Result<Loc, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
         deserializer.deserialize_str(LocVisitor)
     }
@@ -220,9 +220,9 @@ impl Board {
                     owner: Some(TileOwner { player, .. }),
                     ..
                 } if player == p =>
-                {
-                    used.dice += 1
-                }
+                    {
+                        used.dice += 1
+                    }
                 _ => {}
             }
         }
@@ -267,14 +267,14 @@ impl Board {
                     owner,
                     height: h,
                 } if c == casino && h == height =>
-                {
-                    tiles.push(CasinoTile { loc: next, owner });
-                    for n in next.neighbours() {
-                        if !visited.contains(&n) {
-                            queue.insert(n);
+                    {
+                        tiles.push(CasinoTile { loc: next, owner });
+                        for n in next.neighbours() {
+                            if !visited.contains(&n) {
+                                queue.insert(n);
+                            }
                         }
                     }
-                }
                 _ => {}
             }
         }
@@ -433,8 +433,10 @@ mod tests {
             (Block::A, 1).into(),
             BoardTile::Built {
                 casino: Casino::Albion,
-                die: 3,
-                player: 0,
+                owner: Some(TileOwner {
+                    die: 3,
+                    player: 0,
+                }),
                 height: 1,
             },
         );
@@ -466,8 +468,10 @@ mod tests {
             (Block::A, 5).into(),
             BoardTile::Built {
                 casino: Casino::Albion,
-                die: 5,
-                player: 0,
+                owner: Some(TileOwner {
+                    die: 5,
+                    player: 0,
+                }),
                 height: 1,
             },
         );
@@ -490,8 +494,10 @@ mod tests {
             (Block::A, 2).into(),
             BoardTile::Built {
                 casino: Casino::Albion,
-                die: 2,
-                player: 1,
+                owner: Some(TileOwner {
+                    die: 2,
+                    player: 1,
+                }),
                 height: 1,
             },
         );
@@ -539,8 +545,10 @@ mod tests {
             (Block::A, 1).into(),
             BoardTile::Built {
                 casino: Casino::Albion,
-                die: 3,
-                player: 0,
+                owner: Some(TileOwner {
+                    die: 3,
+                    player: 0,
+                }),
                 height: 1,
             },
         );
@@ -551,8 +559,10 @@ mod tests {
             (Block::A, 5).into(),
             BoardTile::Built {
                 casino: Casino::Albion,
-                die: 5,
-                player: 0,
+                owner: Some(TileOwner {
+                    die: 5,
+                    player: 0,
+                }),
                 height: 1,
             },
         );
@@ -563,8 +573,10 @@ mod tests {
             (Block::A, 2).into(),
             BoardTile::Built {
                 casino: Casino::Albion,
-                die: 2,
-                player: 1,
+                owner: Some(TileOwner {
+                    die: 2,
+                    player: 1,
+                }),
                 height: 1,
             },
         );
