@@ -181,6 +181,7 @@ impl Gamer for Game {
             Command::Sprawl { from, to } => unimplemented!(),
             Command::Gamble { player, amount } => unimplemented!(),
             Command::Raise { loc } => unimplemented!(),
+            Command::Done => self.done(player)?,
         };
         Ok(CommandResponse {
             logs,
@@ -237,6 +238,12 @@ impl Game {
         loc: &Loc,
         casino: &Casino,
     ) -> Result<(Vec<Log>, bool), GameError> {
+        if !self.can_build(p) {
+            return Err(GameError::InvalidInput {
+                message: "can't build at the moment".to_string(),
+            });
+        }
+
         if !TILES.contains_key(loc) {
             return Err(GameError::InvalidInput {
                 message: "not a valid location".to_string(),
@@ -290,6 +297,25 @@ impl Game {
         }
 
         Ok((logs, can_undo))
+    }
+
+    fn can_done(&self, player: usize) -> bool {
+        player == self.current_player
+    }
+
+    fn done(&mut self, player: usize) -> Result<(Vec<Log>, bool), GameError> {
+        if !self.can_done(player) {
+            return Err(GameError::InvalidInput {
+                message: "can't end turn at the moment".to_string(),
+            });
+        }
+
+        Ok(self.next_player())
+    }
+
+    fn next_player(&mut self) -> (Vec<Log>, bool) {
+        self.current_player = (self.current_player + 1) % self.players.len();
+        (vec![], false)
     }
 }
 

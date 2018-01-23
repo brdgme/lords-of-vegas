@@ -12,6 +12,7 @@ pub enum Command {
     Reorg { loc: Loc },
     Gamble { player: usize, amount: usize },
     Raise { loc: Loc },
+    Done,
 }
 
 impl Game {
@@ -19,6 +20,9 @@ impl Game {
         let mut parsers: Vec<Box<Parser<Command>>> = vec![];
         if self.can_build(player) {
             parsers.push(Box::new(self.build_parser(player)));
+        }
+        if self.can_done(player) {
+            parsers.push(Box::new(done_parser()));
         }
         Box::new(OneOf::new(parsers))
     }
@@ -159,4 +163,8 @@ fn casino_parser() -> impl Parser<Casino> {
 
 fn money_parser() -> impl Parser<usize> {
     Map::new(Int::positive(), |i| i as usize)
+}
+
+fn done_parser() -> impl Parser<Command> {
+    Map::new(Token::new("done"), |_| Command::Done)
 }
